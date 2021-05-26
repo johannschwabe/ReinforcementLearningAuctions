@@ -1,5 +1,6 @@
 # from https://github.com/koulanurag/ma-gym
 import gym
+import numpy as np
 
 
 class MultiAgentObservationSpace(gym.Space):
@@ -9,11 +10,19 @@ class MultiAgentObservationSpace(gym.Space):
 
         super().__init__(agents_observation_space)
         self._agents_observation_space = agents_observation_space
-        self.shape = (2,)
+        self.shape = (len(agents_observation_space),)
+        self.dtype = np.dtype(np.int32)
 
     def sample(self):
         """ samples observations for each agent from uniform distribution"""
-        return [agent_observation_space.sample() for agent_observation_space in self._agents_observation_space]
+        res = []
+        for agent_observation_space in self._agents_observation_space:
+            sample = agent_observation_space.sample()
+            if hasattr(sample, '__iter__'):
+                res.extend(sample)
+            else:
+                res.append(sample)
+        return res
 
     def contains(self, obs):
         """ contains observation """

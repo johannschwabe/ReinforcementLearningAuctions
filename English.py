@@ -6,15 +6,19 @@ from gym import spaces
 from ray import tune
 from ray.rllib import MultiAgentEnv
 from ray.rllib.agents.ppo import PPOTrainer
-
+from observation_space import MultiAgentObservationSpace
 
 class EnlishAuction(MultiAgentEnv):
     def __init__(self, env_config):
         self.agents = env_config["agents"]
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(low=0, high=100, shape=(5,), dtype=np.int32)
-        # self.action_space = MultiAgentActionSpace([spaces.Discrete(3) for _ in range(len(self.agents))])
-        # self.observation_space = MultiAgentObservationSpace([spaces.Box(low=0, high=100, shape=(1, 5), dtype=np.int16) for _ in range(len(self.agents))])
+        self.observation_space = spaces.Box(low=0, high=200, shape=(5,), dtype=np.int32)
+        # self.observation_space = MultiAgentObservationSpace([
+        #     spaces.Box(low=0, high=200, shape=(1,), dtype=np.int32),
+        #     spaces.Discrete(3), spaces.Discrete(3),
+        #     spaces.Box(low=0, high=100, shape=(1,), dtype=np.int32),
+        #     spaces.Box(low=0, high=100, shape=(1,), dtype=np.int32)
+        # ])
         self.reward_range = (-200, 200)
         self._state = np.zeros(shape=(1, 7), dtype=np.int32)
         self.reset()
@@ -48,7 +52,7 @@ class EnlishAuction(MultiAgentEnv):
         done_n["__all__"] = np.sum(list(action_n.values())) <= 2
 
         for i, agent in enumerate(self.agents):
-            if done_n["__all__"]:
+            if done_n["__all__"] or self._state[0] > 190:
                 reward_n[i] = self._final_reward_i(i)
             else:
                 reward_n[i] = 0
@@ -89,7 +93,7 @@ class EnlishAuction(MultiAgentEnv):
         pass
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=200):
+def get_rllib_config(seeds, debug=False, stop_iters=2000):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
@@ -117,7 +121,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=200):
 
 
 def main():
-    train_n_replicas = 1
+    train_n_replicas = 4
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)
