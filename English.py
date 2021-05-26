@@ -4,9 +4,11 @@ import ray
 import tensorflow as tf
 from gym import spaces
 from ray import tune
-from ray.rllib import MultiAgentEnv
+from ray.rllib import MultiAgentEnv, rollout
 from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.agents.dqn import DQNTrainer, DQNTFPolicy
 from observation_space import MultiAgentObservationSpace
+
 
 class EnlishAuction(MultiAgentEnv):
     def __init__(self, env_config):
@@ -28,9 +30,9 @@ class EnlishAuction(MultiAgentEnv):
         self._state[1:3] = 2
         valuations = np.zeros((4,))
         for x in range(2):
-            valu = np.random.rand(1,2)
-            valuations[2*x] = np.amax(valu) * 100
-            valuations[1+2*x] = np.amin(valu) * 100
+            valu = np.random.rand(1, 2)
+            valuations[2 * x] = np.amax(valu) * 100
+            valuations[1 + 2 * x] = np.amin(valu) * 100
 
         self._state[3:7] = valuations
 
@@ -40,26 +42,33 @@ class EnlishAuction(MultiAgentEnv):
         return obs_n
 
     def step(self, action_n):
+        info = {}
+
         obs_n = {}
-        reward_n = {}
         done_n = {}
+        # info["price"] = self._state[0]
+        # info["bid_p0"] = self._state[1]
+        # info["bid_p1"] = self._state[2]
 
         for i, agent in enumerate(self.agents):
             obs_n[i] = self._observation(i)
-
         self._updateState(action_n)
 
-        done_n["__all__"] = np.sum(list(action_n.values())) <= 2
-
-        for i, agent in enumerate(self.agents):
-            if done_n["__all__"] or self._state[0] > 190:
-                reward_n[i] = self._final_reward_i(i)
-            else:
-                reward_n[i] = 0
+        done_n["__all__"] = np.sum(list(action_n.values())) <= 2 or self._state[0] > 190
+        reward_n = self._calculateRewards(done_n["__all__"])
 
         if not done_n["__all__"]:
             self._state[0] += 1
-        return obs_n, reward_n, done_n, {}
+        return obs_n, reward_n, done_n, info
+
+    def _calculateRewards(self, done):
+        reward_n = {}
+        for i, agent in enumerate(self.agents):
+            if done:
+                reward_n[i] = self._final_reward_i(i)
+            else:
+                reward_n[i] = 0
+        return reward_n
 
     def _updateState(self, action_n):
         for player, bid in action_n.items():
@@ -74,26 +83,25 @@ class EnlishAuction(MultiAgentEnv):
         enemy_demand = self._state[enemy_index + 1]
         my_valuations = self._state[3 + my_index * 2: 5 + my_index * 2]
         res = []
-        res.extend([price,my_demand,enemy_demand])
+        res.extend([price, my_demand, enemy_demand])
         res.extend(my_valuations)
         return res
 
     def _final_reward_i(self, i):
-        bid = self._state[i+1]
+        bid = self._state[i + 1]
         if bid == 0:
             return 0
         res = self._state[3 + i * 2]
         if bid == 2:
             res += self._state[4 + i * 2]
         res -= self._state[0] * bid
-        return res
-
+        return tf.float32(res)
 
     def render(self, mode='human'):
         pass
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=2000):
+def get_rllib_config(seeds, debug=False, stop_iters=200):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
@@ -106,13 +114,14 @@ def get_rllib_config(seeds, debug=False, stop_iters=2000):
         "env_config": env_config,
         "multiagent": {
             "policies": {
-                "ppo_policy": (None, mock.observation_space, mock.action_space, {})
+                "DQN_policy": (None, mock.observation_space, mock.action_space, {})
             },
-            "policy_mapping_fn": lambda agent_id: "ppo_policy",
+            "policy_mapping_fn": lambda agent_id: "DQN_policy",
         },
         "seed": tune.grid_search(seeds),
         "num_gpus": 0,
-        "framework": "tf",
+        "framework": "tf2",
+        "eager_tracing": True,
         "lr": 5e-3,
         "train_batch_size": 128
     }
@@ -121,17 +130,24 @@ def get_rllib_config(seeds, debug=False, stop_iters=2000):
 
 
 def main():
-    train_n_replicas = 4
+    train_n_replicas = 1
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)
-    tune_analysis = tune.run(PPOTrainer,
+    tune_analysis = tune.run(DQNTrainer,
                              config=rllib_config,
                              stop=stop_config,
-                             checkpoint_freq=0,
+                             checkpoint_freq=20,
                              checkpoint_at_end=True,
-                             name="PPO_English")
+                             name="English")
     ray.shutdown()
+    print(list(tune_analysis.results.values())[0]["episode_len_mean"])
+
     return tune_analysis
 
+def test():
+    rollout.rollout(DQNTFPolicy, EnlishAuction, 100)
+
+
 main()
+test()
