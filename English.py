@@ -1,13 +1,13 @@
 import gym
 import numpy as np
 import ray
-import tensorflow as tf
 from gym import spaces
 from ray import tune
 from ray.rllib import MultiAgentEnv, rollout
 from ray.rllib.agents.ppo import PPOTrainer
 from ray.rllib.agents.dqn import DQNTrainer, DQNTFPolicy
 from observation_space import MultiAgentObservationSpace
+import tensorflow as tf
 
 
 class EnlishAuction(MultiAgentEnv):
@@ -65,7 +65,7 @@ class EnlishAuction(MultiAgentEnv):
         reward_n = {}
         for i, agent in enumerate(self.agents):
             if done:
-                reward_n[i] = self._final_reward_i(i)
+                reward_n[i] = self._final_reward_i(i) / 100
             else:
                 reward_n[i] = 0
         return reward_n
@@ -91,63 +91,27 @@ class EnlishAuction(MultiAgentEnv):
         bid = self._state[i + 1]
         if bid == 0:
             return 0
-        res = self._state[3 + i * 2]
+        res = 0.0
+        res += self._state[3 + i * 2]
         if bid == 2:
             res += self._state[4 + i * 2]
         res -= self._state[0] * bid
-        return tf.float32(res)
+
+        return res
 
     def render(self, mode='human'):
-        pass
+        print(self._state[0])
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=200):
-    stop_config = {
-        "training_iteration": 2 if debug else stop_iters,
-    }
+
+def create_english_env():
     env_config = {
         "agents": [0, 1]
     }
-    mock = EnlishAuction(env_config)
-    rllib_config = {
-        "env": EnlishAuction,
-        "env_config": env_config,
-        "multiagent": {
-            "policies": {
-                "DQN_policy": (None, mock.observation_space, mock.action_space, {})
-            },
-            "policy_mapping_fn": lambda agent_id: "DQN_policy",
-        },
-        "seed": tune.grid_search(seeds),
-        "num_gpus": 0,
-        "framework": "tf2",
-        "eager_tracing": True,
-        "lr": 5e-3,
-        "train_batch_size": 128
-    }
-
-    return rllib_config, stop_config, env_config
+    return EnlishAuction(env_config)
 
 
-def main():
-    train_n_replicas = 1
-    seeds = list(range(train_n_replicas))
-    ray.init()
-    rllib_config, stop_config, env_config = get_rllib_config(seeds)
-    tune_analysis = tune.run(DQNTrainer,
-                             config=rllib_config,
-                             stop=stop_config,
-                             checkpoint_freq=20,
-                             checkpoint_at_end=True,
-                             name="English")
-    ray.shutdown()
-    print(list(tune_analysis.results.values())[0]["episode_len_mean"])
-
-    return tune_analysis
-
-def test():
-    rollout.rollout(DQNTFPolicy, EnlishAuction, 100)
+tune.register_env("English", create_english_env)
 
 
-main()
-test()
+
