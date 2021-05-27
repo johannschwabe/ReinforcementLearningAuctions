@@ -5,7 +5,7 @@ from ray import tune
 from English import EnlishAuction
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=200):
+def get_rllib_config(seeds, debug=False, stop_iters=20):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
@@ -57,7 +57,7 @@ def on_episode_end(info):
     episode.custom_metrics["<2"] = action_p0 + action_p1 < 2
 
 def main():
-    train_n_replicas = 8
+    train_n_replicas = 1
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)

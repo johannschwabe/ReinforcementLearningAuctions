@@ -14,7 +14,7 @@ class EnlishAuction(MultiAgentEnv):
     def __init__(self, env_config):
         self._nr_items = env_config["nr_items"]
         self.agents = env_config["agents"]
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Discrete(self._nr_items+1)
         self.observation_space = spaces.Box(low=0, high=200, shape=(3+self._nr_items,), dtype=np.int32)
         # self.observation_space = MultiAgentObservationSpace([
         #     spaces.Box(low=0, high=200, shape=(1,), dtype=np.int32),
@@ -54,7 +54,7 @@ class EnlishAuction(MultiAgentEnv):
             obs_n[i] = self._observation(i)
         self._updateState(action_n)
 
-        done_n["__all__"] = np.sum(list(action_n.values())) <= 2 or self._state[0] > 190
+        done_n["__all__"] = np.sum(list(action_n.values())) <= self._nr_items or self._state[0] > 100 * self._nr_items
         reward_n = self._calculateRewards(done_n["__all__"])
 
         if not done_n["__all__"]:
