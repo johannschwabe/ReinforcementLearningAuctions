@@ -10,7 +10,8 @@ def get_rllib_config(seeds, debug=False, stop_iters=200):
         "training_iteration": 2 if debug else stop_iters,
     }
     env_config = {
-        "agents": [0, 1]
+        "agents": [0, 1],
+        "nr_items": 3
     }
     mock = EnlishAuction(env_config)
     rllib_config = {
