@@ -30,7 +30,7 @@ class EnlishAuction(MultiAgentEnv):
 
     def reset(self):
         self._state = np.zeros(shape=(1 + self.nr_players + self._nr_items * self.nr_players,), dtype=np.int32)
-        self._state[1:self.nr_players] = self._nr_items
+        self._state[1:self.nr_players+1] = self._nr_items
         valuations = np.zeros((self.nr_players * self._nr_items,))
         for x in range(self.nr_players):
             valu = np.random.rand(1, self._nr_items)
@@ -44,21 +44,22 @@ class EnlishAuction(MultiAgentEnv):
         return obs_n
 
     def step(self, action_n):
+        # print("--------")
+        # print(self._state)
         info = {}
 
         obs_n = {}
         done_n = {}
-        # info["price"] = self._state[0]
-        # info["bid_p0"] = self._state[1]
-        # info["bid_p1"] = self._state[2]
 
         for i, agent in enumerate(self.agents):
             obs_n[i] = self._observation(i)
+        # print(obs_n)
         self._updateState(action_n)
+        # print(self._state)
 
-        done_n["__all__"] = np.sum(list(action_n.values())) <= self._nr_items or self._state[0] > 100 * self._nr_items
+        done_n["__all__"] = np.sum(list(self._state[1:self.nr_players + 1])) <= self._nr_items or self._state[0] > 100 * self._nr_items
         reward_n = self._calculateRewards(done_n["__all__"])
-
+        # print(reward_n)
         if not done_n["__all__"]:
             self._state[0] += 1
         return obs_n, reward_n, done_n, info
@@ -80,7 +81,7 @@ class EnlishAuction(MultiAgentEnv):
             for i in range(self._nr_items):
                 if self._state[1 + self.nr_players + (len(self.agents) + ta) * self._nr_items + i] > self._state[0]:
                     bid += 1
-            self._state[len(self.agents) + ta] = bid
+            self._state[len(self.agents) + 1 + ta] = bid
 
     def _observation(self, i):
         my_index = i

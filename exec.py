@@ -12,7 +12,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=300):
     }
     env_config = {
         "nr_agents": 1,
-        "nr_items": 3,
+        "nr_items": 2,
         "nr_truthful_agents": 1
     }
     mock = EnlishAuction(env_config)
@@ -31,55 +31,34 @@ def get_rllib_config(seeds, debug=False, stop_iters=300):
         },
         "num_gpus": 0,
         "framework": "tf",
-        "lr": 5e-3,
+        "lr": 1e-3,
         "train_batch_size": 128
     }
 
     return rllib_config, stop_config, env_config
 
+
 def on_episode_end(info):
     episode = info["episode"]
-    obs_p1 = episode.last_raw_obs_for(1)
     obs_p0 = episode.last_raw_obs_for(0)
     price = obs_p0[0]
-    value_p0 = obs_p0[3:6]
-    value_p1 = obs_p1[3:6]
-    action_p0 = episode.last_action_for(0)
-    action_p1 = episode.last_action_for(1)
-    episode.custom_metrics["p=0"] = price == 0
+    truthful_bid = 0
+    if price < obs_p0[1]:
+        truthful_bid += 1
+        if price < obs_p0[2]:
+            truthful_bid += 1
 
-    all_bids = []
-    all_bids.extend(value_p0)
-    all_bids.extend(value_p1)
-
-    efficient_price = np.sort(all_bids)[2]
-
-    truthful_q_p0 = 0
-    i = 0
-    while i < 3 and value_p0[i] > efficient_price:
-        i += 1
-        truthful_q_p0 += 1
-
-    truthful_q_p1 = 0
-    i = 0
-    while i < 3 and value_p1[i] > efficient_price:
-        i += 1
-        truthful_q_p1 += 1
-
-    episode.custom_metrics["inefficient"] = truthful_q_p0 != action_p0 or truthful_q_p1 != action_p1
-    episode.custom_metrics["2-1"] = action_p0 == 2 and action_p1 == 1
-    episode.custom_metrics["1-2"] = action_p0 == 1 and action_p1 == 2
-    episode.custom_metrics["3-0"] = action_p0 == 3 and action_p1 == 0
-    episode.custom_metrics["0-3"] = action_p0 == 0 and action_p1 == 3
-    episode.custom_metrics["1-1"] = action_p0 == 1 and action_p1 == 1
+    episode.custom_metrics["truthful_bid"] = truthful_bid == obs_p0[1]
+    episode.custom_metrics["overbid"] = truthful_bid < obs_p0[1]
+    episode.custom_metrics["underbid"] = truthful_bid > obs_p0[1]
     episode.custom_metrics["price"] = price
-    episode.custom_metrics["q==3"] = (action_p0 + action_p1) == 3
-    episode.custom_metrics["q==2"] = (action_p0 + action_p1) == 2
-    episode.custom_metrics["q==1"] = (action_p0 + action_p1) == 1
-    episode.custom_metrics["q==0"] = (action_p0 + action_p1) == 0
+    episode.custom_metrics["quantity"] = obs_p0[1]
+    episode.custom_metrics["value_1"] = obs_p0[3]
+    episode.custom_metrics["value_2"] = obs_p0[4]
+
 
 def main():
-    train_n_replicas = 4
+    train_n_replicas = 1
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)
@@ -92,5 +71,6 @@ def main():
     ray.shutdown()
 
     return tune_analysis
+
 
 main()
