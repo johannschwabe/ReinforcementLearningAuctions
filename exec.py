@@ -1,3 +1,4 @@
+import numpy as np
 import ray
 from ray.rllib.agents.dqn import DQNTrainer
 from ray import tune
@@ -40,22 +41,41 @@ def on_episode_end(info):
     obs_p1 = episode.last_raw_obs_for(1)
     obs_p0 = episode.last_raw_obs_for(0)
     price = obs_p0[0]
-    value_p0 = obs_p0[3:5]
-    value_p1 = obs_p1[3:5]
+    value_p0 = obs_p0[3:6]
+    value_p1 = obs_p1[3:6]
     action_p0 = episode.last_action_for(0)
     action_p1 = episode.last_action_for(1)
     episode.custom_metrics["p=0"] = price == 0
+
+    all_bids = []
+    all_bids.extend(value_p0)
+    all_bids.extend(value_p1)
+
+    efficient_price = np.sort(all_bids)[2]
+
     truthful_q_p0 = 0
-    if value_p0[0] > value_p1[1]:
+    i = 0
+    while value_p0[i] > efficient_price:
+        i += 1
         truthful_q_p0 += 1
-        if value_p0[1] > value_p1[0]:
-            truthful_q_p0 += 1
-    episode.custom_metrics["inefficient"] = truthful_q_p0 != action_p0
+
+    truthful_q_p1 = 0
+    i = 0
+    while value_p1[i] > efficient_price:
+        i += 1
+        truthful_q_p1 += 1
+
+    episode.custom_metrics["inefficient"] = truthful_q_p0 != action_p0 or truthful_q_p1 != action_p1
     episode.custom_metrics["2-1"] = action_p0 == 2 and action_p1 == 1
     episode.custom_metrics["1-2"] = action_p0 == 1 and action_p1 == 2
     episode.custom_metrics["3-0"] = action_p0 == 3 and action_p1 == 0
     episode.custom_metrics["0-3"] = action_p0 == 0 and action_p1 == 3
-    episode.custom_metrics["<3"] = action_p0 + action_p1 < 3
+    episode.custom_metrics["1-1"] = action_p0 == 1 and action_p1 == 1
+    episode.custom_metrics["price"] = price
+    episode.custom_metrics["q==3"] = (action_p0 + action_p1) == 3
+    episode.custom_metrics["q==2"] = (action_p0 + action_p1) == 2
+    episode.custom_metrics["q==1"] = (action_p0 + action_p1) == 1
+    episode.custom_metrics["q==0"] = (action_p0 + action_p1) == 0
 
 def main():
     train_n_replicas = 4
