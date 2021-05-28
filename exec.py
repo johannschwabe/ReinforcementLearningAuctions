@@ -55,13 +55,13 @@ def on_episode_end(info):
 
     truthful_q_p0 = 0
     i = 0
-    while value_p0[i] > efficient_price:
+    while i < 3 and value_p0[i] > efficient_price:
         i += 1
         truthful_q_p0 += 1
 
     truthful_q_p1 = 0
     i = 0
-    while value_p1[i] > efficient_price:
+    while i < 3 and value_p1[i] > efficient_price:
         i += 1
         truthful_q_p1 += 1
 

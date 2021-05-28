@@ -13,9 +13,11 @@ import tensorflow as tf
 class EnlishAuction(MultiAgentEnv):
     def __init__(self, env_config):
         self._nr_items = env_config["nr_items"]
-        self.agents = env_config["agents"]
+        self.agents = list(range(env_config["nr_agents"]))
+        self.nr_truthful_agents = env_config["nr_truthful_agents"]
+        self.nr_players = len(self.agents) + self.nr_truthful_agents
         self.action_space = spaces.Discrete(self._nr_items+1)
-        self.observation_space = spaces.Box(low=0, high=100*self._nr_items, shape=(3+self._nr_items,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=100*self._nr_items, shape=(1 + self.nr_players + self._nr_items,), dtype=np.int32)
         # self.observation_space = MultiAgentObservationSpace([
         #     spaces.Box(low=0, high=200, shape=(1,), dtype=np.int32),
         #     spaces.Discrete(3), spaces.Discrete(3),
@@ -23,14 +25,14 @@ class EnlishAuction(MultiAgentEnv):
         #     spaces.Box(low=0, high=100, shape=(1,), dtype=np.int32)
         # ])
         self.reward_range = (-100 * self._nr_items, 100 * self._nr_items)
-        self._state = np.zeros(shape=(3+self._nr_items*2,), dtype=np.int32)
+        self._state = np.zeros(shape=(1 + self.nr_players + self._nr_items * self.nr_players,), dtype=np.int32)
         self.reset()
 
     def reset(self):
-        self._state = np.zeros(shape=(3+self._nr_items*2,), dtype=np.int32)
-        self._state[1:3] = self._nr_items
-        valuations = np.zeros((2*self._nr_items,))
-        for x in range(2):
+        self._state = np.zeros(shape=(1 + self.nr_players + self._nr_items * self.nr_players,), dtype=np.int32)
+        self._state[1:self.nr_players] = self._nr_items
+        valuations = np.zeros((self.nr_players * self._nr_items,))
+        for x in range(self.nr_players):
             valu = np.random.rand(1, self._nr_items)
             valuations[self._nr_items * x:self._nr_items * (x+1)] = -np.sort(-valu) * 100
 
@@ -76,14 +78,16 @@ class EnlishAuction(MultiAgentEnv):
 
     def _observation(self, i):
         my_index = i
-        enemy_index = (i + 1) % 2
 
         price = self._state[0]
         my_demand = self._state[my_index + 1]
-        enemy_demand = self._state[enemy_index + 1]
-        my_valuations = self._state[3 + my_index * self._nr_items: 3 + self._nr_items * (my_index +1)]
+        enemy_demand = []
+        enemy_demand.extend(self._state[1:my_index])
+        enemy_demand.extend(self._state[my_index+1:self.nr_players])
+        my_valuations = self._state[1 + self.nr_players + my_index * self._nr_items: 1 + self.nr_players + self._nr_items * (my_index +1)]
         res = []
-        res.extend([price, my_demand, enemy_demand])
+        res.extend([price, my_demand])
+        res.extend(enemy_demand)
         res.extend(my_valuations)
         return res
 
@@ -92,14 +96,14 @@ class EnlishAuction(MultiAgentEnv):
         if bid == 0:
             return 0
 
-        my_value_index = 3 + i * self._nr_items
+        my_value_index = 1 + self.nr_players + i * self._nr_items
         res = np.sum(self._state[my_value_index:my_value_index+bid])
 
         res -= self._state[0] * bid
         return res
 
     def render(self, mode='human'):
-        print(self._state[0])
+        pass
 
 
 
