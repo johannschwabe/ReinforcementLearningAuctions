@@ -30,8 +30,9 @@ def get_rllib_config(seeds, debug=False, stop_iters=300):
             "on_episode_end": on_episode_end
         },
         "num_gpus": 0,
-        "framework": "tf",
-        "lr": 1e-3,
+        "framework": "tf2",
+        "eager_tracing": True,
+        "lr": 1e-4,
         "train_batch_size": 128
     }
 
@@ -41,13 +42,15 @@ def get_rllib_config(seeds, debug=False, stop_iters=300):
 def on_episode_end(info):
     episode = info["episode"]
     obs_p0 = episode.last_raw_obs_for(0)
+    info_last_episode = episode.last_info_for(0)
     price = obs_p0[0]
     truthful_bid = 0
-    if price < obs_p0[1]:
+    truthful_price = np.sort(info_last_episode[3:])[1]
+    if price < obs_p0[3]:
         truthful_bid += 1
-        if price < obs_p0[2]:
+        if price < obs_p0[4]:
             truthful_bid += 1
-
+    episode.custom_metrics["dif_to_truthful"] = truthful_price - price
     episode.custom_metrics["truthful_bid"] = truthful_bid == obs_p0[1]
     episode.custom_metrics["overbid"] = truthful_bid < obs_p0[1]
     episode.custom_metrics["underbid"] = truthful_bid > obs_p0[1]
