@@ -15,7 +15,7 @@ class EnlishAuction(MultiAgentEnv):
         self._nr_items = env_config["nr_items"]
         self.agents = env_config["agents"]
         self.action_space = spaces.Discrete(self._nr_items+1)
-        self.observation_space = spaces.Box(low=0, high=200, shape=(3+self._nr_items,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=100*self._nr_items, shape=(3+self._nr_items,), dtype=np.int32)
         # self.observation_space = MultiAgentObservationSpace([
         #     spaces.Box(low=0, high=200, shape=(1,), dtype=np.int32),
         #     spaces.Discrete(3), spaces.Discrete(3),
@@ -81,7 +81,7 @@ class EnlishAuction(MultiAgentEnv):
         price = self._state[0]
         my_demand = self._state[my_index + 1]
         enemy_demand = self._state[enemy_index + 1]
-        my_valuations = self._state[3 + my_index * 2: 3 + self._nr_items + my_index * 2]
+        my_valuations = self._state[3 + my_index * self._nr_items: 3 + self._nr_items * (my_index +1)]
         res = []
         res.extend([price, my_demand, enemy_demand])
         res.extend(my_valuations)
@@ -96,7 +96,6 @@ class EnlishAuction(MultiAgentEnv):
         res = np.sum(self._state[my_value_index:my_value_index+bid])
 
         res -= self._state[0] * bid
-
         return res
 
     def render(self, mode='human'):

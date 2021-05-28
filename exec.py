@@ -5,7 +5,7 @@ from ray import tune
 from English import EnlishAuction
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=20):
+def get_rllib_config(seeds, debug=False, stop_iters=300):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
@@ -44,20 +44,21 @@ def on_episode_end(info):
     value_p1 = obs_p1[3:5]
     action_p0 = episode.last_action_for(0)
     action_p1 = episode.last_action_for(1)
-    episode.custom_metrics["1-1-0"] = action_p0 == 1 and action_p1 == 1 and obs_p1[0] == 0
+    episode.custom_metrics["p=0"] = price == 0
     truthful_q_p0 = 0
     if value_p0[0] > value_p1[1]:
         truthful_q_p0 += 1
         if value_p0[1] > value_p1[0]:
             truthful_q_p0 += 1
     episode.custom_metrics["inefficient"] = truthful_q_p0 != action_p0
-    episode.custom_metrics["1-1"] = action_p0 == 1 and action_p1 == 1
-    episode.custom_metrics["2-0"] = action_p0 == 1 and action_p1 == 0
-    episode.custom_metrics["0-2"] = action_p1 == 1 and action_p0 == 0
-    episode.custom_metrics["<2"] = action_p0 + action_p1 < 2
+    episode.custom_metrics["2-1"] = action_p0 == 2 and action_p1 == 1
+    episode.custom_metrics["1-2"] = action_p0 == 1 and action_p1 == 2
+    episode.custom_metrics["3-0"] = action_p0 == 3 and action_p1 == 0
+    episode.custom_metrics["0-3"] = action_p0 == 0 and action_p1 == 3
+    episode.custom_metrics["<3"] = action_p0 + action_p1 < 3
 
 def main():
-    train_n_replicas = 1
+    train_n_replicas = 4
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)
@@ -68,7 +69,6 @@ def main():
                              checkpoint_at_end=True,
                              name="English",)
     ray.shutdown()
-    print(list(tune_analysis.results.values())[0]["episode_len_mean"])
 
     return tune_analysis
 
