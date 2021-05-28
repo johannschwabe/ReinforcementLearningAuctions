@@ -75,6 +75,12 @@ class EnlishAuction(MultiAgentEnv):
     def _updateState(self, action_n):
         for player, bid in action_n.items():
             self._state[player + 1] = bid
+        for ta in range(self.nr_truthful_agents):
+            bid = 0
+            for i in range(self._nr_items):
+                if self._state[1 + self.nr_players + (len(self.agents) + ta) * self._nr_items + i] > self._state[0]:
+                    bid += 1
+            self._state[len(self.agents) + ta] = bid
 
     def _observation(self, i):
         my_index = i
