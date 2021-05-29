@@ -20,16 +20,14 @@ def run():
     steps = 100
 
     for _ in range(steps):
+        print("----- New Game -----")
         done = {"__all__": False}
         obs = auction.reset()
+        print(obs)
         while not done["__all__"]:
-            print(obs)
             action_0 = player.compute_action(obs[0], policy_id="DQN_policy")
             action_1 = player.compute_action(obs[1], policy_id="DQN_policy")
             obs, reward, done, info = auction.step({0: action_0, 1: action_1})
-            print(action_0)
-            print(action_1)
-            print(reward)
-            print(done)
-
+            print(f"A0: {action_0}, A1: {action_1}")
+        print(reward)
 run()
