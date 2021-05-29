@@ -81,7 +81,7 @@ def main():
     train_n_replicas = 1
     seeds = list(range(train_n_replicas))
     ray.init()
-    rllib_config, stop_config, env_config = get_rllib_config(seeds)
+    rllib_config, stop_config, _ = get_rllib_config(seeds)
     tune_analysis = tune.run(DQNTrainer,
                              config=rllib_config,
                              stop=stop_config,
@@ -92,4 +92,6 @@ def main():
 
     return tune_analysis
 
-main()
+
+if __name__ == "__main__":
+    main()
