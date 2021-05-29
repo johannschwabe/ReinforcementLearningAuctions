@@ -12,18 +12,24 @@ def run():
     seeds = list(range(train_n_replicas))
     rllib_config, _, env_config = get_rllib_config(seeds)
     rllib_config["seed"] = 0
+    # rllib_config["in_evaluation"] = True
     ray.init()
     auction = EnlishAuction(env_config)
-    player = DQNTrainer(rllib_config, EnlishAuction)
+    player = DQNTrainer(config=rllib_config, env=EnlishAuction)
     player.restore(checkpoint_path)
+    steps = 100
 
-    done = False
-    obs = auction.reset()
-    while not done:
-        action = player.compute_action(obs, policy_id="DQN_policy")
-        obs, reward, done, info = auction.step(action)
-        print(action)
-        print(reward)
-
+    for _ in range(steps):
+        done = {"__all__": False}
+        obs = auction.reset()
+        while not done["__all__"]:
+            print(obs)
+            action_0 = player.compute_action(obs[0], policy_id="DQN_policy")
+            action_1 = player.compute_action(obs[1], policy_id="DQN_policy")
+            obs, reward, done, info = auction.step({0: action_0, 1: action_1})
+            print(action_0)
+            print(action_1)
+            print(reward)
+            print(done)
 
 run()
