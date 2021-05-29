@@ -6,13 +6,13 @@ from ray import tune
 from English import EnlishAuction
 
 
-def get_rllib_config(seeds, debug=False, stop_iters=300):
+def get_rllib_config(seeds, debug=False, stop_iters=500):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
     env_config = {
         "agents": [0, 1],
-        "nr_items": 3
+        "nr_items": 2
     }
     mock = EnlishAuction(env_config)
     rllib_config = {
@@ -29,8 +29,8 @@ def get_rllib_config(seeds, debug=False, stop_iters=300):
             "on_episode_end": on_episode_end
         },
         "num_gpus": 0,
-        "framework": "tf",
-        "lr": 5e-3,
+        "framework": "tf2",
+        "lr": 1e-5,
         "train_batch_size": 128
     }
 
@@ -78,7 +78,7 @@ def on_episode_end(info):
     episode.custom_metrics["q==0"] = (action_p0 + action_p1) == 0
 
 def main():
-    train_n_replicas = 4
+    train_n_replicas = 1
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, env_config = get_rllib_config(seeds)

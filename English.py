@@ -67,7 +67,7 @@ class EnlishAuction(MultiAgentEnv):
             if done:
                 reward_n[i] = self._final_reward_i(i) / 100
             else:
-                reward_n[i] = 0
+                reward_n[i] = 0.0
         return reward_n
 
     def _updateState(self, action_n):
