@@ -1,11 +1,12 @@
 import numpy as np
 import ray
 from ray.rllib.agents.dqn import DQNTrainer
+from ray.rllib.agents.ppo import PPOTrainer
 from ray import tune
 
 from SequentialSecondPrice import SequentialAuction
 
-def get_rllib_config(seeds, debug=False, stop_iters=500):
+def get_rllib_config(seeds, debug=False, stop_iters=1500):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
@@ -23,15 +24,15 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
             "policy_mapping_fn": lambda agent_id: "DQN_policy",
         },
         "seed": tune.grid_search(seeds),
-        "callbacks": {
-            "on_episode_step": on_step
-        },
+        # "callbacks": {
+        #     "on_episode_step": on_step
+        # },
         "num_gpus": 0,
         "framework": "tf2",
         "lr": 1e-5,
         "lr_schedule": [
             [0, 2.5e-4],
-            [1e6, 1e-5]
+            [1e6, 5e-5]
         ],
         "train_batch_size": 128
     }
@@ -45,9 +46,9 @@ def on_step(info):
     state = np.zeros(shape=(2 + 2 * nr_agents,), dtype=np.int32)
     obs_p0 = episode.last_raw_obs_for(0)
     state[0:3] = obs_p0[0:3]
-    state[2+nr_agents:] = obs_p0[2+nr_agents:]
     for x in range(1,nr_agents):
-        state[2+x] = episode.last_raw_obs_for(x)[3]
+        state[2+x] = episode.last_raw_obs_for(x)[2]
+        state[2+nr_agents+x] = episode.last_raw_obs_for(x)[3]
 
     ssd = 0
     for x in range(nr_agents):
@@ -61,11 +62,12 @@ def equilibrium_bid(player, state, nr_agents):
         return 0.0
     N = nr_agents
     K = state[0]
-    k = state[1]
+    k = state[1] - 1
     x = state[2 + player]
     return x * (N - K) / (N - k)
+
 def main():
-    train_n_replicas = 1
+    train_n_replicas = 4
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, _ = get_rllib_config(seeds)

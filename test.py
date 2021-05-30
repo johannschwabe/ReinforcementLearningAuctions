@@ -3,9 +3,11 @@ import ray
 
 from English import EnlishAuction
 from ray.rllib.agents.dqn import DQNTrainer
+from ray.rllib.agents.ppo import PPOTrainer
+
 from train import get_rllib_config
 
-checkpoint_path = "/Users/johannschwabe/ray_results/English/DQN_EnlishAuction_f6b0c_00000_0_seed=0_2021-05-28_22-12-01/checkpoint_000500/checkpoint-500"
+checkpoint_path = "/Users/johannschwabe/ray_results/English/DQN_EnlishAuction_1a5ec_00000_0_seed=0_2021-05-30_17-38-38/checkpoint_000500/checkpoint-500"
 
 
 def run():
@@ -18,7 +20,7 @@ def run():
     auction = EnlishAuction(env_config)
     player = DQNTrainer(config=rllib_config, env=EnlishAuction)
     player.restore(checkpoint_path=checkpoint_path,)
-    steps = 200
+    steps = 500
     res = np.zeros((6,steps), dtype=np.float)
     for iteration in range(steps):
         # print("----- New Game -----")
@@ -27,8 +29,8 @@ def run():
         reward = {}
         # print(obs)
         while not done["__all__"]:
-            action_0 = player.compute_action(obs[0], policy_id="DQN_policy")
-            action_1 = player.compute_action(obs[1], policy_id="DQN_policy")
+            action_0 = player.compute_action(obs[0], policy_id="PPO_policy")
+            action_1 = player.compute_action(obs[1], policy_id="PPO_policy")
             obs, reward, done, info = auction.step({0: action_0, 1: action_1})
             # print(f"A0: {action_0}, A1: {action_1}")
         obs_p0 = obs[0]

@@ -1,6 +1,7 @@
 import numpy as np
 import ray
 from ray.rllib.agents.dqn import DQNTrainer
+from ray.rllib.agents.ppo import PPOTrainer
 from ray import tune
 
 from English import EnlishAuction
@@ -60,7 +61,7 @@ def main():
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, _ = get_rllib_config(seeds)
-    tune_analysis = tune.run(DQNTrainer,
+    tune_analysis = tune.run(PPOTrainer,
                              config=rllib_config,
                              stop=stop_config,
                              checkpoint_freq=20,

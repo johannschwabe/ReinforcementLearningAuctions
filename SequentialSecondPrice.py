@@ -8,7 +8,7 @@ class SequentialAuction(MultiAgentEnv):
         self._nr_agents = env_config["nr_agents"]
         self._state = np.zeros(shape=(2+5*self._nr_agents))
         self.action_space = spaces.Discrete(100)
-        self.observation_space = spaces.Box(low=0, high=100, shape=(3+self._nr_agents,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=100, shape=(4,), dtype=np.int32)
         self.reward_range = (-4, 1)
         self._state = np.zeros(shape=(2 + 2 * self._nr_agents), dtype=np.int32)
         self.reset()
@@ -18,6 +18,7 @@ class SequentialAuction(MultiAgentEnv):
         nr_items = np.random.randint(1,self._nr_agents)
         valuations = np.random.rand(1, self._nr_agents) * 100
         self._state[0] = nr_items
+        self._state[1] = 1
         self._state[2:2+self._nr_agents] = valuations
         obs_n = {}
         for i in range(self._nr_agents):
@@ -31,9 +32,10 @@ class SequentialAuction(MultiAgentEnv):
         obs_n = {}
         done_n = {}
 
+        done_n["__all__"] = self._state[0] == self._state[1]
+
         reward_n = self._updateState(action_n)
 
-        done_n["__all__"] = self._state[0] == self._state[1]
 
         for i in range(self._nr_agents):
             obs_n[i] = self._observation(i)
@@ -63,14 +65,10 @@ class SequentialAuction(MultiAgentEnv):
 
 
     def _observation(self, i):
-        obs = np.zeros(3+self._nr_agents)
+        obs = np.zeros(4)
         obs[:2] = self._state[:2]       #nr_items, iteration
         obs[2] = self._state[2 + i]     #pi valuation
         obs[3] = self._state[2 + self._nr_agents + i]
-        winnings_enemy = []
-        winnings_enemy.extend(self._state[2 + self._nr_agents: 2 + self._nr_agents + i])
-        winnings_enemy.extend(self._state[3 + self._nr_agents + i:])
-        obs[3:2+self._nr_agents] = winnings_enemy     #enemy valu
         return obs
 
 
