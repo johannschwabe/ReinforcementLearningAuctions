@@ -50,13 +50,12 @@ class EnlishAuction(MultiAgentEnv):
 
         done_n["__all__"] = np.sum(list(action_n.values())) <= self._nr_items or self._state[0] > 100 * self._nr_items - 20
 
+        reward_n = self._calculateRewards(done_n["__all__"])
+        if not done_n["__all__"]:
+            self._state[0] += 1
         for i, agent in enumerate(self.agents):
             obs_n[i] = self._observation(i)
 
-        reward_n = self._calculateRewards(done_n["__all__"])
-
-        if not done_n["__all__"]:
-            self._state[0] += 1
         return obs_n, reward_n, done_n, info
 
     def _calculateRewards(self, done):

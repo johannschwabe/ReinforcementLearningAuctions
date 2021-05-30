@@ -24,7 +24,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
         },
         "seed": tune.grid_search(seeds),
         "callbacks": {
-            "on_episode_end": on_episode_end
+            "on_episode_step": on_step
         },
         "num_gpus": 0,
         "framework": "tf2",
@@ -38,7 +38,8 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
 
     return rllib_config, stop_config, env_config
 
-def on_episode_end(info):
+
+def on_step(info):
     episode = info["episode"]
     nr_agents = 4
     state = np.zeros(shape=(2 + 2 * nr_agents,), dtype=np.int32)
