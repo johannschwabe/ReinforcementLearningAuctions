@@ -19,18 +19,24 @@ class SequentialAuction(MultiAgentEnv):
         valuations = np.random.rand(1, self._nr_agents) * 100
         self._state[0] = nr_items
         self._state[2:2+self._nr_agents] = valuations
+        obs_n = {}
+        for i in range(self._nr_agents):
+            obs_n[i] = self._observation(i)
+        return obs_n
+
 
     def step(self, action_n):
+
         info = {}
         obs_n = {}
         done_n = {}
 
+        reward_n = self._updateState(action_n)
+
+        done_n["__all__"] = self._state[0] == self._state[1]
+
         for i in range(self._nr_agents):
             obs_n[i] = self._observation(i)
-
-        done_n["__all__"] = np.sum(self._state[2+self._nr_agents:]) - 1 == self._state[0]
-
-        reward_n = self._updateState(action_n)
         return obs_n, reward_n, done_n, info
 
     def _updateState(self, action_n):
@@ -52,7 +58,7 @@ class SequentialAuction(MultiAgentEnv):
 
                 res[player] = (valuation - second_highest_bid) / 100
                 self._state[2 + self._nr_agents + winning_player] += 1
-
+        self._state[1] += 1
         return res
 
 
@@ -76,5 +82,3 @@ def create_seq_env():
 
 if __name__ == "__main__":
     tune.register_env("Sequential", create_seq_env)
-    test = create_seq_env()
-    test.step({0: 12, 1: 23, 2: 34, 3: 45})

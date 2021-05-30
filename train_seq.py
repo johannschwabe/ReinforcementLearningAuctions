@@ -3,20 +3,18 @@ import ray
 from ray.rllib.agents.dqn import DQNTrainer
 from ray import tune
 
-from English import EnlishAuction
-
+from SequentialSecondPrice import SequentialAuction
 
 def get_rllib_config(seeds, debug=False, stop_iters=500):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
     env_config = {
-        "agents": [0, 1],
-        "nr_items": 2
+        "nr_agents": 4
     }
-    mock = EnlishAuction(env_config)
+    mock = SequentialAuction(env_config)
     rllib_config = {
-        "env": EnlishAuction,
+        "env": SequentialAuction,
         "env_config": env_config,
         "multiagent": {
             "policies": {
@@ -42,19 +40,29 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
 
 def on_episode_end(info):
     episode = info["episode"]
+    nr_agents = 4
+    state = np.zeros(shape=(2 + 2 * nr_agents,), dtype=np.int32)
     obs_p0 = episode.last_raw_obs_for(0)
-    price = obs_p0[0]
-    action_p0 = episode.last_action_for(0)
-    action_p1 = episode.last_action_for(1)
+    state[0:3] = obs_p0[0:3]
+    state[2+nr_agents:] = obs_p0[2+nr_agents:]
+    for x in range(1,nr_agents):
+        state[2+x] = episode.last_raw_obs_for(x)[3]
 
-    episode.custom_metrics["p=0"] = price == 0
-    episode.custom_metrics["1-1"] = action_p0 == 1 and action_p1 == 1
-    episode.custom_metrics["2-0"] = action_p0 == 2 and action_p1 == 0
-    episode.custom_metrics["0-2"] = action_p0 == 0 and action_p1 == 2
-    episode.custom_metrics["q==2"] = (action_p0 + action_p1) == 2
-    episode.custom_metrics["q==1"] = (action_p0 + action_p1) == 1
-    episode.custom_metrics["q==0"] = (action_p0 + action_p1) == 0
+    ssd = 0
+    for x in range(nr_agents):
+        ssd += (equilibrium_bid(x, state, nr_agents) - episode.last_action_for(x))**2
 
+    episode.custom_metrics["ssd"] = ssd
+
+def equilibrium_bid(player, state, nr_agents):
+    has_won_bevore = state[2 + nr_agents + player] >= 1
+    if has_won_bevore:
+        return 0.0
+    N = nr_agents
+    K = state[0]
+    k = state[1]
+    x = state[2 + player]
+    return x * (N - K) / (N - k)
 def main():
     train_n_replicas = 1
     seeds = list(range(train_n_replicas))
@@ -65,7 +73,7 @@ def main():
                              stop=stop_config,
                              checkpoint_freq=20,
                              checkpoint_at_end=True,
-                             name="English",)
+                             name="Sequential",)
     ray.shutdown()
 
     return tune_analysis
