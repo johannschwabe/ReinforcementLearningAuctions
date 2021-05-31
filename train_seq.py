@@ -19,9 +19,9 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         "env_config": env_config,
         "multiagent": {
             "policies": {
-                "DQN_policy": (None, mock.observation_space, mock.action_space, {})
+                "PPO_policy": (None, mock.observation_space, mock.action_space, {})
             },
-            "policy_mapping_fn": lambda agent_id: "DQN_policy",
+            "policy_mapping_fn": lambda agent_id: "PPO_policy",
         },
         "seed": tune.grid_search(seeds),
         # "callbacks": {
@@ -29,12 +29,15 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         # },
         "num_gpus": 0,
         "framework": "tf2",
-        "lr": 1e-5,
+        "lr": 7.5e-4,
         "lr_schedule": [
-            [0, 2.5e-4],
+            [0, 7.5e-4],
             [1e6, 5e-5]
         ],
-        "train_batch_size": 128
+        "model": {
+            "fcnet_hiddens": [256, 256, 256, 256],
+        },
+        "train_batch_size": 256
     }
 
     return rllib_config, stop_config, env_config
@@ -67,11 +70,11 @@ def equilibrium_bid(player, state, nr_agents):
     return x * (N - K) / (N - k)
 
 def main():
-    train_n_replicas = 4
+    train_n_replicas = 2
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, _ = get_rllib_config(seeds)
-    tune_analysis = tune.run(DQNTrainer,
+    tune_analysis = tune.run(PPOTrainer,
                              config=rllib_config,
                              stop=stop_config,
                              checkpoint_freq=20,
