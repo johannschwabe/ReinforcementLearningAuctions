@@ -12,7 +12,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
         "training_iteration": 2 if debug else stop_iters,
     }
     env_config = {
-        "agents": [0, 1],
+        "agents": [0, 1, 2],
         "nr_items": 2
     }
     mock = EnlishAuction(env_config)
@@ -21,9 +21,9 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
         "env_config": env_config,
         "multiagent": {
             "policies": {
-                "DQN_policy": (None, mock.observation_space, mock.action_space, {})
+                "PPO_policy": (None, mock.observation_space, mock.action_space, {})
             },
-            "policy_mapping_fn": lambda agent_id: "DQN_policy",
+            "policy_mapping_fn": lambda agent_id: "PPO_policy",
         },
         "seed": tune.grid_search(seeds),
         "callbacks": {
@@ -31,6 +31,10 @@ def get_rllib_config(seeds, debug=False, stop_iters=500):
         },
         "num_gpus": 0,
         "framework": "tf2",
+        "model": {
+            "fcnet_hiddens": [256, 256, 256, 256],
+            "fcnet_activation": "tanh"
+        },
         "lr": 1e-5,
         "lr_schedule": [
             [0, 2.5e-4],

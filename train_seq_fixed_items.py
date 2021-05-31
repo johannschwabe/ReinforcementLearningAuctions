@@ -20,9 +20,9 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         "env_config": env_config,
         "multiagent": {
             "policies": {
-                "PPO_policy": (None, mock.observation_space, mock.action_space, {})
+                "DQN_policy": (None, mock.observation_space, mock.action_space, {})
             },
-            "policy_mapping_fn": lambda agent_id: "PPO_policy",
+            "policy_mapping_fn": lambda agent_id: "DQN_policy",
         },
         "seed": tune.grid_search(seeds),
         # "callbacks": {
@@ -31,8 +31,12 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         "num_gpus": 0,
         "framework": "tf2",
         "lr": 7e-4,
+        "lr_schedule": [
+            [0, 7.5e-4],
+            [2e5, 2e-5]
+        ],
         "model": {
-            "fcnet_hiddens": [256, 256, 256],
+            "fcnet_hiddens": [256, 256, 256, 256, 256, 256, 256, 256],
             "fcnet_activation": "tanh"
         },
         "train_batch_size": 128
@@ -72,7 +76,7 @@ def main():
     seeds = list(range(train_n_replicas))
     ray.init()
     rllib_config, stop_config, _ = get_rllib_config(seeds)
-    tune_analysis = tune.run(PPOTrainer,
+    tune_analysis = tune.run(DQNTrainer,
                              config=rllib_config,
                              stop=stop_config,
                              checkpoint_freq=20,

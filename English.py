@@ -1,13 +1,7 @@
-import gym
 import numpy as np
-import ray
 from gym import spaces
 from ray import tune
 from ray.rllib import MultiAgentEnv, rollout
-from ray.rllib.agents.ppo import PPOTrainer
-from ray.rllib.agents.dqn import DQNTrainer, DQNTFPolicy
-from observation_space import MultiAgentObservationSpace
-import tensorflow as tf
 
 
 class EnlishAuction(MultiAgentEnv):
