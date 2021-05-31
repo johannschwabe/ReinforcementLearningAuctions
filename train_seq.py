@@ -36,6 +36,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         ],
         "model": {
             "fcnet_hiddens": [256, 256, 256, 256],
+            "fcnet_activation": "relu"
         },
         "train_batch_size": 256
     }
