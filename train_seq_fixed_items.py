@@ -4,18 +4,19 @@ from ray.rllib.agents.dqn import DQNTrainer
 from ray.rllib.agents.ppo import PPOTrainer
 from ray import tune
 
-from SequentialSecondPrice import SequentialAuction
+from SequentialSecondPriceFixedItems import SequentialAuctionFixedItems
 
 def get_rllib_config(seeds, debug=False, stop_iters=1500):
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
     env_config = {
-        "nr_agents": 4
+        "nr_agents": 5,
+        "nr_items": 3,
     }
-    mock = SequentialAuction(env_config)
+    mock = SequentialAuctionFixedItems(env_config)
     rllib_config = {
-        "env": SequentialAuction,
+        "env": SequentialAuctionFixedItems,
         "env_config": env_config,
         "multiagent": {
             "policies": {
@@ -29,13 +30,9 @@ def get_rllib_config(seeds, debug=False, stop_iters=1500):
         # },
         "num_gpus": 0,
         "framework": "tf2",
-        "lr": 5e-4,
-        "lr_schedule": [
-            [0, 7.5e-4],
-            [1e6, 5e-5]
-        ],
+        "lr": 7e-4,
         "model": {
-            "fcnet_hiddens": [256, 256, 256, 256],
+            "fcnet_hiddens": [256, 256, 256],
             "fcnet_activation": "tanh"
         },
         "train_batch_size": 128

@@ -1,12 +1,12 @@
 import numpy as np
 import ray
 
-from SequentialSecondPrice import SequentialAuction
+from SequentialSecondPriceFixedItems import SequentialAuctionFixedItems
 from ray.rllib.agents.dqn import DQNTrainer
 from ray.rllib.agents.ppo import PPOTrainer
-from train_seq import get_rllib_config
+from train_seq_fixed_items import get_rllib_config
 
-checkpoint_path = "/Users/johannschwabe/ray_results/Sequential/PPO_SequentialAuction_574d1_00000_0_seed=0_2021-05-31_10-58-17/checkpoint_000900/checkpoint-900"
+checkpoint_path = "/Users/johannschwabe/ray_results/Sequential/PPO_SequentialAuctionFixedItems_7990d_00000_0_seed=0_2021-05-31_13-29-34/checkpoint_001500/checkpoint-1500"
 
 
 def equilibrium_bid(player, state, nr_agents):
@@ -25,21 +25,21 @@ def eval():
     rllib_config["seed"] = 0
     rllib_config["explore"] = False
     ray.init()
-    player = PPOTrainer(config=rllib_config, env=SequentialAuction)
+    player = PPOTrainer(config=rllib_config, env=SequentialAuctionFixedItems)
     player.restore(checkpoint_path=checkpoint_path, )
     sad = 0
     counter = 0
-    nr_agents = 4
+    nr_agents = rllib_config["env_config"]["nr_agents"]
     has_one = 0
-    f = open("/Users/johannschwabe/Downloads/tests/seqPPO-.txt", "w")
-    for items in range(1,nr_agents):
-        for value in range(0, 100, 1):
-            for iter in range(1,items+1):
-                counter += 1
-                action = player.compute_action([items, iter, value, has_one], policy_id="PPO_policy")
-                equilibrium_action = value * (nr_agents-items)/(nr_agents-iter)
-                sad += abs(action-equilibrium_action)
-                f.write(f"{items}, {value}, {iter}, {action}\n")
+    items = rllib_config["env_config"]["nr_items"]
+    f = open("/Users/johannschwabe/Downloads/tests/seq_fixedPPO-7990d.txt", "w")
+    for value in range(0, 100, 1):
+        for iter in range(1,items+1):
+            counter += 1
+            action = player.compute_action([iter, value, has_one], policy_id="PPO_policy")
+            equilibrium_action = value * (nr_agents-items)/(nr_agents-iter)
+            sad += abs(action-equilibrium_action)
+            f.write(f"{items}, {value}, {iter}, {action}\n")
     print(f"avg. SAD: {sad/counter}")
     f.close()
 def run():
@@ -49,8 +49,8 @@ def run():
     rllib_config["seed"] = 0
     rllib_config["explore"] = False
     ray.init()
-    auction = SequentialAuction(env_config)
-    player = DQNTrainer(config=rllib_config, env=SequentialAuction)
+    auction = SequentialAuctionFixedItems(env_config)
+    player = DQNTrainer(config=rllib_config, env=SequentialAuctionFixedItems)
     player.restore(checkpoint_path=checkpoint_path,)
     steps = 10
     sad = 0
